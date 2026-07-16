@@ -65,8 +65,8 @@ if uploaded_files and gemini_api_key:
                 try:
                     # Set API key in environment for LangChain components
                     os.environ["GOOGLE_API_KEY"] = gemini_api_key
-                    # Corrected class name: GoogleGenerativeAIEmbeddings
-                    embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
+                    # Updated to the new supported model: models/gemini-embedding-001
+                    embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
                     st.session_state.vector_store = FAISS.from_documents(all_docs, embeddings)
                     st.success(f"Successfully indexed {len(all_docs)} text chunks!")
                 except Exception as e:
