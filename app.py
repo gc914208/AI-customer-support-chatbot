@@ -4,7 +4,7 @@ import tempfile
 from langchain_community.document_loaders import PyPDFLoader, TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
-from langchain_google_genai import GoogleGenAIEmbeddings, ChatGoogleGenerativeAI
+from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
 from langchain.chains import create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate
@@ -65,7 +65,8 @@ if uploaded_files and gemini_api_key:
                 try:
                     # Set API key in environment for LangChain components
                     os.environ["GOOGLE_API_KEY"] = gemini_api_key
-                    embeddings = GoogleGenAIEmbeddings(model="models/text-embedding-004")
+                    # Corrected class name: GoogleGenerativeAIEmbeddings
+                    embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
                     st.session_state.vector_store = FAISS.from_documents(all_docs, embeddings)
                     st.success(f"Successfully indexed {len(all_docs)} text chunks!")
                 except Exception as e:
