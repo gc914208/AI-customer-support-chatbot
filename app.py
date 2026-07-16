@@ -96,7 +96,7 @@ if user_query := st.chat_input("Ask a customer support question..."):
                 try:
                     os.environ["GOOGLE_API_KEY"] = gemini_api_key
                     llm = ChatGoogleGenerativeAI(
-                        model="gemini-2.5-flash",
+                        model="gemini-3.5-flash",
                         temperature=0.2,
                     )
                     
