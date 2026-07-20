@@ -16,7 +16,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# Custom CSS for Three-Dots Loading Animation
+# Custom CSS for Animated Three-Dots Loading Indicator
 st.markdown("""
 <style>
 .loading-dots {
@@ -62,7 +62,7 @@ if "chat_history" not in st.session_state:
 with st.sidebar:
     st.header("⚙️ Configuration")
     
-    # If key is NOT in Streamlit Secrets, show a fallback text box
+    # Fallback input if Secrets key isn't provided
     if not gemini_api_key:
         gemini_api_key = st.text_input("Enter Gemini API Key", type="password")
     else:
@@ -75,7 +75,7 @@ with st.sidebar:
         accept_multiple_files=True
     )
     
-    # Reset Buttons
+    # Reset Actions
     st.markdown("---")
     st.subheader("App Management")
     if st.button("🧹 Clear Chat History", use_container_width=True):
@@ -92,7 +92,8 @@ if uploaded_files and gemini_api_key:
     if st.session_state.vector_store is None:
         with st.spinner("Processing and indexing documents with Gemini embeddings..."):
             all_docs = []
-            text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=150)
+            # High speed optimization: smaller chunk size
+            text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
             
             for uploaded_file in uploaded_files:
                 with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
@@ -128,7 +129,7 @@ for role, content in st.session_state.chat_history:
     with st.chat_message(role):
         st.write(content)
 
-# User Input
+# User Input Handling
 if user_query := st.chat_input("Ask a customer support question..."):
     st.session_state.chat_history.append(("user", user_query))
     with st.chat_message("user"):
@@ -142,17 +143,21 @@ if user_query := st.chat_input("Ask a customer support question..."):
         else:
             try:
                 os.environ["GOOGLE_API_KEY"] = gemini_api_key
+                
+                # Fast Model & Generation Setup
                 llm = ChatGoogleGenerativeAI(
                     model="gemini-3.5-flash",
-                    temperature=0.2,
+                    temperature=0.1,
+                    max_output_tokens=250,
                     streaming=True
                 )
                 
-                retriever = st.session_state.vector_store.as_retriever(search_kwargs={"k": 3})
+                # Fetch only top 2 relevant context chunks for low latency
+                retriever = st.session_state.vector_store.as_retriever(search_kwargs={"k": 2})
                 
                 system_prompt = (
                     "You are 'ApexAssist', an empathetic and professional AI customer support assistant.\n"
-                    "Answer the user's question using ONLY the provided context below. If you do not know the answer "
+                    "Answer the user's question concisely using ONLY the provided context below. If you do not know the answer "
                     "or if it is not in the context, say exactly:\n"
                     "'I'm sorry, but I don't have that information on hand. Let me connect you to a live support agent to help you further.'\n"
                     "Do not make up facts, URLs, or policies.\n\n"
@@ -174,13 +179,13 @@ if user_query := st.chat_input("Ask a customer support question..."):
                     unsafe_allow_html=True
                 )
                 
-                # Streaming Generator
+                # Token Streaming Generator
                 def stream_response():
                     first_chunk = True
                     for chunk in rag_chain.stream({"input": user_query}):
                         if "answer" in chunk:
                             if first_chunk:
-                                loader_placeholder.empty() # Remove the dots as soon as words start typing
+                                loader_placeholder.empty()  # Removes dots on first token
                                 first_chunk = False
                             yield chunk["answer"]
                 
