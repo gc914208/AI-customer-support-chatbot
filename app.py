@@ -16,8 +16,41 @@ st.set_page_config(
     layout="wide"
 )
 
+# Custom CSS for Three-Dots Loading Animation
+st.markdown("""
+<style>
+.loading-dots {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background-color: #f0f2f6;
+    border-radius: 12px;
+    margin-bottom: 10px;
+}
+.loading-dots span {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #007bff;
+    animation: bounce 1.4s infinite ease-in-out both;
+}
+.loading-dots span:nth-child(1) { animation-delay: -0.32s; }
+.loading-dots span:nth-child(2) { animation-delay: -0.16s; }
+.loading-dots span:nth-child(3) { animation-delay: 0s; }
+
+@keyframes bounce {
+    0%, 80%, 100% { transform: scale(0); }
+    40% { transform: scale(1.0); }
+}
+</style>
+""", unsafe_allow_html=True)
+
 st.title("🤖 ApexAssist AI Support Bot (Gemini RAG)")
 st.write("Upload knowledge base documents (.pdf or .txt) and chat with your Gemini-powered customer support bot.")
+
+# Retrieve API key automatically from Streamlit Secrets or sidebar fallback
+gemini_api_key = st.secrets.get("GEMINI_API_KEY", None)
 
 # Initialize Session States
 if "vector_store" not in st.session_state:
@@ -28,8 +61,13 @@ if "chat_history" not in st.session_state:
 # Sidebar Configuration
 with st.sidebar:
     st.header("⚙️ Configuration")
-    gemini_api_key = st.text_input("Enter Gemini API Key", type="password")
     
+    # If key is NOT in Streamlit Secrets, show a fallback text box
+    if not gemini_api_key:
+        gemini_api_key = st.text_input("Enter Gemini API Key", type="password")
+    else:
+        st.success("🔑 Gemini API Key loaded permanently from secrets!")
+
     st.subheader("Document Ingestion")
     uploaded_files = st.file_uploader(
         "Upload Training Files (.pdf, .txt)", 
@@ -75,7 +113,6 @@ if uploaded_files and gemini_api_key:
             
             if all_docs:
                 try:
-                    # Set API key in environment for LangChain components
                     os.environ["GOOGLE_API_KEY"] = gemini_api_key
                     embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
                     st.session_state.vector_store = FAISS.from_documents(all_docs, embeddings)
@@ -99,7 +136,7 @@ if user_query := st.chat_input("Ask a customer support question..."):
         
     with st.chat_message("assistant"):
         if not gemini_api_key:
-            st.error("Please provide your Gemini API Key in the sidebar configuration.")
+            st.error("Please provide your Gemini API Key in the sidebar or set it in Streamlit Secrets.")
         elif st.session_state.vector_store is None:
             st.warning("Please upload at least one knowledge base document (.pdf or .txt) to activate RAG.")
         else:
@@ -108,7 +145,7 @@ if user_query := st.chat_input("Ask a customer support question..."):
                 llm = ChatGoogleGenerativeAI(
                     model="gemini-3.5-flash",
                     temperature=0.2,
-                    streaming=True # Enables token-by-token generation
+                    streaming=True
                 )
                 
                 retriever = st.session_state.vector_store.as_retriever(search_kwargs={"k": 3})
@@ -130,13 +167,23 @@ if user_query := st.chat_input("Ask a customer support question..."):
                 question_answer_chain = create_stuff_documents_chain(llm, prompt)
                 rag_chain = create_retrieval_chain(retriever, question_answer_chain)
                 
-                # Streaming Generator function
+                # Render 3-Dots Animation Placeholder
+                loader_placeholder = st.empty()
+                loader_placeholder.markdown(
+                    '<div class="loading-dots"><span></span><span></span><span></span></div>', 
+                    unsafe_allow_html=True
+                )
+                
+                # Streaming Generator
                 def stream_response():
+                    first_chunk = True
                     for chunk in rag_chain.stream({"input": user_query}):
                         if "answer" in chunk:
+                            if first_chunk:
+                                loader_placeholder.empty() # Remove the dots as soon as words start typing
+                                first_chunk = False
                             yield chunk["answer"]
                 
-                # Render the streaming response inside Streamlit
                 answer = st.write_stream(stream_response())
                 st.session_state.chat_history.append(("assistant", answer))
                 
