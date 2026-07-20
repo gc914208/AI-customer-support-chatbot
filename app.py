@@ -19,6 +19,12 @@ st.set_page_config(
 st.title("🤖 ApexAssist AI Support Bot (Gemini RAG)")
 st.write("Upload knowledge base documents (.pdf or .txt) and chat with your Gemini-powered customer support bot.")
 
+# Initialize Session States
+if "vector_store" not in st.session_state:
+    st.session_state.vector_store = None
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
+
 # Sidebar Configuration
 with st.sidebar:
     st.header("⚙️ Configuration")
@@ -30,12 +36,18 @@ with st.sidebar:
         type=["pdf", "txt"], 
         accept_multiple_files=True
     )
-
-# Initialize Session States
-if "vector_store" not in st.session_state:
-    st.session_state.vector_store = None
-if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []
+    
+    # Reset Buttons
+    st.markdown("---")
+    st.subheader("App Management")
+    if st.button("🧹 Clear Chat History", use_container_width=True):
+        st.session_state.chat_history = []
+        st.rerun()
+        
+    if st.button("🗑️ Clear Database Documents", use_container_width=True):
+        st.session_state.vector_store = None
+        st.success("Database cleared! You can upload new files.")
+        st.rerun()
 
 # Process Uploaded Files
 if uploaded_files and gemini_api_key:
@@ -65,7 +77,6 @@ if uploaded_files and gemini_api_key:
                 try:
                     # Set API key in environment for LangChain components
                     os.environ["GOOGLE_API_KEY"] = gemini_api_key
-                    # Updated to the new supported model: models/gemini-embedding-001
                     embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
                     st.session_state.vector_store = FAISS.from_documents(all_docs, embeddings)
                     st.success(f"Successfully indexed {len(all_docs)} text chunks!")
@@ -92,37 +103,42 @@ if user_query := st.chat_input("Ask a customer support question..."):
         elif st.session_state.vector_store is None:
             st.warning("Please upload at least one knowledge base document (.pdf or .txt) to activate RAG.")
         else:
-            with st.spinner("Generating answer using Gemini..."):
-                try:
-                    os.environ["GOOGLE_API_KEY"] = gemini_api_key
-                    llm = ChatGoogleGenerativeAI(
-                        model="gemini-3.5-flash",
-                        temperature=0.2,
-                    )
-                    
-                    retriever = st.session_state.vector_store.as_retriever(search_kwargs={"k": 3})
-                    
-                    system_prompt = (
-                        "You are 'ApexAssist', an empathetic and professional AI customer support assistant.\n"
-                        "Answer the user's question using ONLY the provided context below. If you do not know the answer "
-                        "or if it is not in the context, say exactly:\n"
-                        "'I'm sorry, but I don't have that information on hand. Let me connect you to a live support agent to help you further.'\n"
-                        "Do not make up facts, URLs, or policies.\n\n"
-                        "Context:\n{context}"
-                    )
-                    
-                    prompt = ChatPromptTemplate.from_messages([
-                        ("system", system_prompt),
-                        ("human", "{input}"),
-                    ])
-                    
-                    question_answer_chain = create_stuff_documents_chain(llm, prompt)
-                    rag_chain = create_retrieval_chain(retriever, question_answer_chain)
-                    
-                    response = rag_chain.invoke({"input": user_query})
-                    answer = response["answer"]
-                    
-                    st.write(answer)
-                    st.session_state.chat_history.append(("assistant", answer))
-                except Exception as e:
-                    st.error(f"An error occurred: {str(e)}")
+            try:
+                os.environ["GOOGLE_API_KEY"] = gemini_api_key
+                llm = ChatGoogleGenerativeAI(
+                    model="gemini-3.5-flash",
+                    temperature=0.2,
+                    streaming=True # Enables token-by-token generation
+                )
+                
+                retriever = st.session_state.vector_store.as_retriever(search_kwargs={"k": 3})
+                
+                system_prompt = (
+                    "You are 'ApexAssist', an empathetic and professional AI customer support assistant.\n"
+                    "Answer the user's question using ONLY the provided context below. If you do not know the answer "
+                    "or if it is not in the context, say exactly:\n"
+                    "'I'm sorry, but I don't have that information on hand. Let me connect you to a live support agent to help you further.'\n"
+                    "Do not make up facts, URLs, or policies.\n\n"
+                    "Context:\n{context}"
+                )
+                
+                prompt = ChatPromptTemplate.from_messages([
+                    ("system", system_prompt),
+                    ("human", "{input}"),
+                ])
+                
+                question_answer_chain = create_stuff_documents_chain(llm, prompt)
+                rag_chain = create_retrieval_chain(retriever, question_answer_chain)
+                
+                # Streaming Generator function
+                def stream_response():
+                    for chunk in rag_chain.stream({"input": user_query}):
+                        if "answer" in chunk:
+                            yield chunk["answer"]
+                
+                # Render the streaming response inside Streamlit
+                answer = st.write_stream(stream_response())
+                st.session_state.chat_history.append(("assistant", answer))
+                
+            except Exception as e:
+                st.error(f"An error occurred: {str(e)}")
