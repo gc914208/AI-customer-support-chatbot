@@ -146,7 +146,7 @@ if user_query := st.chat_input("Ask a customer support question..."):
                 
                 # Fast Model & Generation Setup
                 llm = ChatGoogleGenerativeAI(
-                    model="gemini-3.1-flash",
+                    model="gemini-2.0-flash",
                     temperature=0.1,
                     max_output_tokens=250,
                     streaming=True
