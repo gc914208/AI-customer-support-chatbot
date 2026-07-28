@@ -6,8 +6,8 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_groq import ChatGroq
-from langchain_classic.chains import create_retrieval_chain
-from langchain_classic.chains.combine_documents import create_stuff_documents_chain
+from langchain.chains import create_retrieval_chain
+from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate
 
 # Page Config
@@ -50,7 +50,7 @@ st.markdown("""
 st.title("🤖 Apex Customer Support (Powered by Groq)")
 st.write("Ask any customer support question below.")
 
-# Retrieve Keys
+# Retrieve Keys from Streamlit Secrets
 groq_api_key = st.secrets.get("GROQ_API_KEY", None)
 gemini_api_key = st.secrets.get("GEMINI_API_KEY", None)
 
@@ -136,7 +136,7 @@ if user_query := st.chat_input("How can I help you today?"):
             st.error("Please provide your Groq API Key in Streamlit Secrets or sidebar.")
         else:
             try:
-                # Fast Groq LLM (Llama-3.3-70b gives high quality & high speed)
+                # Fast Groq LLM
                 llm = ChatGroq(
                     model="llama-3.3-70b-versatile",
                     groq_api_key=groq_api_key,
