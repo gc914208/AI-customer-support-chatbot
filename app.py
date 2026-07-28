@@ -4,19 +4,20 @@ import tempfile
 from langchain_community.document_loaders import PyPDFLoader, TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
-from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_groq import ChatGroq
 from langchain_classic.chains import create_retrieval_chain
 from langchain_classic.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate
 
-# Page Configuration
+# Page Config
 st.set_page_config(
-    page_title="ApexAssist - Gemini RAG Support Bot",
+    page_title="ApexAssist - AI Support Bot",
     page_icon="🤖",
     layout="wide"
 )
 
-# Custom CSS for Animated Three-Dots Loading Indicator
+# Custom CSS for Loading Dots
 st.markdown("""
 <style>
 .loading-dots {
@@ -46,53 +47,54 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.title("🤖 ApexAssist AI Support Bot (Gemini RAG)")
-st.write("Upload knowledge base documents (.pdf or .txt) and chat with your Gemini-powered customer support bot.")
+st.title("🤖 ApexAssist Support Bot (Powered by Groq)")
+st.write("Ask any customer support question below.")
 
-# Retrieve API key automatically from Streamlit Secrets or sidebar fallback
+# Retrieve Keys
+groq_api_key = st.secrets.get("GROQ_API_KEY", None)
 gemini_api_key = st.secrets.get("GEMINI_API_KEY", None)
 
 # Initialize Session States
-if "vector_store" not in st.session_state:
-    st.session_state.vector_store = None
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
+if "vector_store" not in st.session_state:
+    st.session_state.vector_store = None
 
 # Sidebar Configuration
 with st.sidebar:
     st.header("⚙️ Configuration")
     
-    # Fallback input if Secrets key isn't provided
-    if not gemini_api_key:
-        gemini_api_key = st.text_input("Enter Gemini API Key", type="password")
-    else:
-        st.success("🔑 Gemini API Key loaded permanently from secrets!")
-
-    st.subheader("Document Ingestion")
+    if not groq_api_key:
+        groq_api_key = st.text_input("Enter Groq API Key", type="password")
+        
+    st.markdown("---")
+    st.subheader("📄 Optional: Upload Document for RAG")
+    st.caption("Upload a file if you want the bot to answer from custom knowledge.")
     uploaded_files = st.file_uploader(
-        "Upload Training Files (.pdf, .txt)", 
+        "Upload support file (.pdf, .txt)", 
         type=["pdf", "txt"], 
         accept_multiple_files=True
     )
     
-    # Reset Actions
     st.markdown("---")
     st.subheader("App Management")
     if st.button("🧹 Clear Chat History", use_container_width=True):
         st.session_state.chat_history = []
         st.rerun()
-        
-    if st.button("🗑️ Clear Database Documents", use_container_width=True):
+
+    if st.button("🗑️ Clear Uploaded Documents", use_container_width=True):
         st.session_state.vector_store = None
-        st.success("Database cleared! You can upload new files.")
+        st.success("Cleared documents! Bot reset to standard mode.")
         st.rerun()
 
-# Process Uploaded Files
-if uploaded_files and gemini_api_key:
-    if st.session_state.vector_store is None:
-        with st.spinner("Processing and indexing documents with Gemini embeddings..."):
+# Optional RAG Ingestion (Only runs if a user uploads a file)
+if uploaded_files:
+    if not gemini_api_key:
+        gemini_api_key = st.sidebar.text_input("Enter Gemini API Key (Required for embeddings)", type="password")
+    
+    if gemini_api_key and st.session_state.vector_store is None:
+        with st.spinner("Processing documents for custom knowledge..."):
             all_docs = []
-            # High speed optimization: smaller chunk size
             text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
             
             for uploaded_file in uploaded_files:
@@ -113,84 +115,87 @@ if uploaded_files and gemini_api_key:
                     os.remove(tmp_filepath)
             
             if all_docs:
-                try:
-                    os.environ["GOOGLE_API_KEY"] = gemini_api_key
-                    embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
-                    st.session_state.vector_store = FAISS.from_documents(all_docs, embeddings)
-                    st.success(f"Successfully indexed {len(all_docs)} text chunks!")
-                except Exception as e:
-                    st.error(f"Failed to initialize embeddings: {str(e)}")
+                os.environ["GOOGLE_API_KEY"] = gemini_api_key
+                embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
+                st.session_state.vector_store = FAISS.from_documents(all_docs, embeddings)
+                st.success("Document loaded! Bot will now use this document to answer.")
 
-# Chat Interface
-st.subheader("💬 Chat with ApexAssist")
-
-# Display historical messages
+# Render Chat History
 for role, content in st.session_state.chat_history:
     with st.chat_message(role):
         st.write(content)
 
-# User Input Handling
-if user_query := st.chat_input("Ask a customer support question..."):
+# User Query Handler
+if user_query := st.chat_input("How can I help you today?"):
     st.session_state.chat_history.append(("user", user_query))
     with st.chat_message("user"):
         st.write(user_query)
         
     with st.chat_message("assistant"):
-        if not gemini_api_key:
-            st.error("Please provide your Gemini API Key in the sidebar or set it in Streamlit Secrets.")
-        elif st.session_state.vector_store is None:
-            st.warning("Please upload at least one knowledge base document (.pdf or .txt) to activate RAG.")
+        if not groq_api_key:
+            st.error("Please provide your Groq API Key in Streamlit Secrets or sidebar.")
         else:
             try:
-                os.environ["GOOGLE_API_KEY"] = gemini_api_key
-                
-                # Fast Model & Generation Setup
-                llm = ChatGoogleGenerativeAI(
-                    model="gemini-2.0-flash-lite",
+                # Fast Groq LLM (Llama-3.3-70b gives high quality & high speed)
+                llm = ChatGroq(
+                    model="llama-3.3-70b-versatile",
+                    groq_api_key=groq_api_key,
                     temperature=0.1,
-                    max_output_tokens=250,
+                    max_tokens=300,
                     streaming=True
                 )
                 
-                # Fetch only top 2 relevant context chunks for low latency
-                retriever = st.session_state.vector_store.as_retriever(search_kwargs={"k": 2})
-                
-                system_prompt = (
-                    "You are 'ApexAssist', an empathetic and professional AI customer support assistant.\n"
-                    "Answer the user's question concisely using ONLY the provided context below. If you do not know the answer "
-                    "or if it is not in the context, say exactly:\n"
-                    "'I'm sorry, but I don't have that information on hand. Let me connect you to a live support agent to help you further.'\n"
-                    "Do not make up facts, URLs, or policies.\n\n"
-                    "Context:\n{context}"
-                )
-                
-                prompt = ChatPromptTemplate.from_messages([
-                    ("system", system_prompt),
-                    ("human", "{input}"),
-                ])
-                
-                question_answer_chain = create_stuff_documents_chain(llm, prompt)
-                rag_chain = create_retrieval_chain(retriever, question_answer_chain)
-                
-                # Render 3-Dots Animation Placeholder
                 loader_placeholder = st.empty()
                 loader_placeholder.markdown(
                     '<div class="loading-dots"><span></span><span></span><span></span></div>', 
                     unsafe_allow_html=True
                 )
                 
-                # Token Streaming Generator
-                def stream_response():
-                    first_chunk = True
-                    for chunk in rag_chain.stream({"input": user_query}):
-                        if "answer" in chunk:
+                # PATH A: RAG Mode (If a document was uploaded)
+                if st.session_state.vector_store is not None:
+                    retriever = st.session_state.vector_store.as_retriever(search_kwargs={"k": 2})
+                    system_prompt = (
+                        "You are 'ApexAssist', an empathetic customer support AI.\n"
+                        "Answer concise, factual support questions using ONLY the context below:\n\n{context}"
+                    )
+                    prompt = ChatPromptTemplate.from_messages([
+                        ("system", system_prompt),
+                        ("human", "{input}"),
+                    ])
+                    chain = create_retrieval_chain(retriever, create_stuff_documents_chain(llm, prompt))
+                    
+                    def stream_rag():
+                        first_chunk = True
+                        for chunk in chain.stream({"input": user_query}):
+                            if "answer" in chunk:
+                                if first_chunk:
+                                    loader_placeholder.empty()
+                                    first_chunk = False
+                                yield chunk["answer"]
+                    
+                    answer = st.write_stream(stream_rag())
+
+                # PATH B: Standard Chat Mode (No document needed!)
+                else:
+                    system_prompt = "You are 'ApexAssist', an empathetic and helpful AI customer support assistant. Answer concisely."
+                    prompt = ChatPromptTemplate.from_messages([
+                        ("system", system_prompt),
+                        ("human", "{input}"),
+                    ])
+                    chain = prompt | llm
+                    
+                    def stream_standard():
+                        first_chunk = True
+                        for chunk in chain.stream({"input": user_query}):
                             if first_chunk:
-                                loader_placeholder.empty()  # Removes dots on first token
+                                loader_placeholder.empty()
                                 first_chunk = False
-                            yield chunk["answer"]
+                            yield chunk.content
+                    
+                    answer = st.write_stream(stream_standard())
                 
-                answer = st.write_stream(stream_response())
                 st.session_state.chat_history.append(("assistant", answer))
                 
             except Exception as e:
-                st.error(f"An error occurred: {str(e)}")
+                loader_placeholder.empty()
+                st.error(f"Error: {str(e)}")
