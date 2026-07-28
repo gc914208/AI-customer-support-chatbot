@@ -1,75 +1,64 @@
 ApexAssist - AI Customer Support Bot
 
-ApexAssist is a high-speed AI customer support assistant built with **Streamlit**, **Groq (Llama-3.3-70b)**, and **LangChain**. It functions both as a standard fast support chatbot and as a **Retrieval-Augmented Generation (RAG)** engine when provided with company-specific knowledge base files.
+**ApexAssist** is a fast, intelligent customer support chatbot designed for e-commerce and business support. It answers customer queries instantly and can automatically pull information from custom company documents (like FAQs, shipping rules, and return policies).
 
 ---
 
-## ✨ Features
+## 🎯 How to Use ApexAssist
 
-- **🚀 Dual Mode Operation:**
-  - **Standard Mode:** Answers general support inquiries instantly using `llama-3.3-70b-versatile` via Groq.
-  - **RAG Mode:** Dynamically activated when files are uploaded, grounding answers strictly in custom knowledge base documents.
-- **⚡ Ultra-Fast Responses:** Powered by Groq's LPU hardware for near-instant streaming answers.
-- **📄 Document Support:** Accepts `.pdf` and `.txt` support documents.
-- **🔍 Vector Retrieval:** Uses Google Gemini embeddings (`models/gemini-embedding-001`) with **FAISS** for fast similarity searching.
-- **💬 Interactive Chat UI:** Includes custom CSS loading indicators, streaming response output, and chat history controls.
+### 💬 1. General Support Chat (Standard Mode)
+- Simply open the app and type any general support question into the chat box (e.g., *"How can customer support help me today?"*).
+- Responses stream back instantly using **Groq (Llama 3.3)**.
+
+### 📄 2. Company Knowledge Search (RAG Mode)
+To make the bot answer using **specific company information**:
+1. Open the **Sidebar** on the left.
+2. Upload a support document (`.pdf` or `.txt`) — *you can try uploading the included `apex_wear_faq.txt` file!*
+3. Once processed, ask questions about products, shipping, returns, or warranty:
+   - *"What is the return window for items?"*
+   - *"How should I wash my Apex Wear hoodie?"*
+   - *"What is the standard shipping time to Canada?"*
+4. ApexAssist will answer grounded **strictly** in your uploaded document's details!
 
 ---
 
-## 🛠️ Tech Stack
+## ✨ Key Features
 
-- **Frontend/Framework:** [Streamlit](https://streamlit.io/)
+- **⚡ Instant Streaming Responses:** Powered by Groq LPU hardware for near-zero delay.
+- **📚 Smart Document Ingestion (RAG):** Upload any company PDF/TXT file to give the bot immediate domain knowledge.
+- **🔄 Flexible Modes:** Switches automatically between general assistance and document-grounded answers.
+- **🧹 Easy Controls:** Clear chat history or reset uploaded documents with a single click in the sidebar.
+
+---
+
+## 🛠️ How It Works (Tech Stack)
+
+- **Frontend Interface:** [Streamlit](https://streamlit.io/)
 - **LLM Engine:** [Groq API](https://groq.com/) (`llama-3.3-70b-versatile`)
-- **Embeddings:** [Google Gemini API](https://ai.google.dev/) (`models/gemini-embedding-001`)
+- **Embeddings & Search:** [Google Gemini API](https://ai.google.dev/) (`models/gemini-embedding-001`) with **FAISS Vector Database**
 - **Orchestration:** [LangChain](https://www.langchain.com/)
-- **Vector Database:** [FAISS CPU](https://github.com/facebookresearch/faiss)
 
 ---
 
-## 🚀 Quickstart & Local Setup
+## 🔑 Setup & Configuration
 
-### 1. Clone the Repository
-```bash
+### Prerequisites & API Keys
+This app uses Streamlit Secrets for configuration (`.streamlit/secrets.toml` locally, or via **Streamlit Cloud Settings**):
+
+```toml
+GROQ_API_KEY = "your_groq_api_key_here"
+GEMINI_API_KEY = "your_gemini_api_key_here" # Needed for document embeddings
+Running Locally
+Clone the repository:
+
+Bash
 git clone [https://github.com/YOUR_USERNAME/YOUR_REPOSITORY.git](https://github.com/YOUR_USERNAME/YOUR_REPOSITORY.git)
 cd YOUR_REPOSITORY
-2. Install Dependencies
+Install required packages:
+
 Bash
 pip install -r requirements.txt
-3. Run the Streamlit App
+Run the application:
+
 Bash
 streamlit run app.py
-🔑 Environment Variables & Secrets
-To run the application, configure your API keys in Streamlit Secrets (.streamlit/secrets.toml locally, or in Streamlit Cloud Settings):
-
-Ini, TOML
-GROQ_API_KEY = "gsk_YourGroqApiKeyHere"
-GEMINI_API_KEY = "YourGeminiApiKeyHere"  # Required only when using RAG document search
-📖 How to Use
-Ask General Questions: Type directly into the chat box for instant general responses.
-
-Enable Custom Knowledge (RAG Mode):
-
-Expand the Sidebar.
-
-Upload your company support documents (.pdf or .txt).
-
-Enter your GEMINI_API_KEY (if not pre-configured in secrets).
-
-Ask specific questions about your products, shipping, returns, or policies!
-
-Reset: Use the Clear Chat History or Clear Uploaded Documents buttons in the sidebar at any time.
-
-📁 Repository Structure
-Plaintext
-├── app.py              # Main Streamlit application entry point
-├── requirements.txt    # Python package dependencies
-├── README.md           # Project documentation
-└── apex_wear_faq.txt   # Sample company knowledge base file
-
----
-
-### How to Add It to GitHub in 3 Steps:
-
-1. Open your repository on **GitHub**.
-2. Click **Add file** ➔ **Create new file**.
-3. Name the file **`README.md`**, paste the text above, and click **Commit changes...** at the top right.
