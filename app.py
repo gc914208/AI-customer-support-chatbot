@@ -12,7 +12,7 @@ from langchain_core.prompts import ChatPromptTemplate
 
 # Page Config
 st.set_page_config(
-    page_title="Apex -Customer Support",
+    page_title="Apex - Customer Support",
     page_icon="🤖",
     layout="wide"
 )
