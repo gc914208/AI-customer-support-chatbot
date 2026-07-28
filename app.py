@@ -47,7 +47,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.title("🤖 ApexAssist Support Bot (Powered by Groq)")
+st.title("🤖 Apex Customer Support (Powered by Groq)")
 st.write("Ask any customer support question below.")
 
 # Retrieve Keys
