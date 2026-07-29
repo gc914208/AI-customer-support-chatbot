@@ -74,14 +74,16 @@ Ini, TOML
 GROQ_API_KEY = "gsk_your_groq_api_key_here"
 Deploy!
 
-📁 Project Structure
-Plaintext
+
+
 ├── .streamlit/
 │   └── secrets.toml      # Local secrets configuration (Git ignored)
 ├── app.py                # Main Streamlit application entry point
 ├── requirements.txt      # Python dependencies
 ├── runtime.txt           # Forces Python 3.11 on Streamlit Cloud
 └── README.md             # Project documentation
+
+
 🤝 Contributing
 Contributions, issues, and feature requests are welcome! Feel free to check the issues page if you want to contribute.
 
