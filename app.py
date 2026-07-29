@@ -35,7 +35,7 @@ with st.sidebar:
     
     st.divider()
     st.header("📄 Knowledge Base")
-    st.caption("Optional: Upload files for custom support answers.")
+    st.caption("Optional: Upload files for custom support answers with RAG.")
     uploaded_files = st.file_uploader(
         "Upload support docs (.pdf, .txt)",
         type=["pdf", "txt"],
