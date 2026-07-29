@@ -152,7 +152,7 @@ if user_input := st.chat_input("Type your question here..."):
         
         # Standard Mode (No files uploaded)
         else:
-            system_prompt = "You are ApexAssist, an empathetic and helpful AI customer support assistant. Answer concisely."
+            system_prompt = "You are ApexAssist, an empathetic and helpful AI customer support assistant, for a e-commerce company named Apex wear. Answer concisely,"
             prompt = ChatPromptTemplate.from_messages([
                 ("system", system_prompt),
                 ("human", "{input}"),
