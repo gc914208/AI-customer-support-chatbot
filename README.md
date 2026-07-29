@@ -90,3 +90,19 @@ Contributions, issues, and feature requests are welcome! Feel free to check the 
 
 📄 License
 This project is open-source under the MIT License.
+
+---
+
+## 🧪(optional) Testing the RAG Pipeline (Quickstart Example)
+
+This repository includes a sample knowledge base file (`apex_wear_faq.txt`&`apex_wear_policiestxt`) so you can test the Retrieval-Augmented Generation (RAG) feature right away:
+
+1. **Start the app:** Run `streamlit run app.py` or open the live deployment.
+2. **Enter your API Key:** Input your Groq key (`gsk_...`) in the sidebar if it is not already loaded via secrets.
+3. **Upload the Sample File:** In the sidebar under **"Upload Documentation"**, upload `apex_wear_faq.txt` or `apex_wear_policies.txt` from the project folder.
+4. **Ask Context-Grounded Questions:** Try asking specific questions covered in the document, such as:
+   - *"What is the return policy for ApexWear items?"*
+   - *"Do you offer international shipping?"*
+   - *"How should I wash the performance hoodies?"*
+
+The bot will automatically query the FAISS vector store and generate accurate, context-grounded answers directly from the uploaded file!
